@@ -7,6 +7,8 @@
 GLFWwindow* window;
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 using namespace glm;
 
 #include <common/shader.hpp>
@@ -22,7 +24,7 @@ int main( void )
 	}
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
+	//glfwWindowHint(GLFW_RESIZABLE,GL_FALSE);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
@@ -59,8 +61,24 @@ int main( void )
 	glBindVertexArray(VertexArrayID);
 
 	//这里是加载当前exe目录下的shader文件的形式读取文件的
-	GLuint programID = LoadShaders("SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader");
+	GLuint programID = LoadShaders("SimpleTransform.vertexshader", "SingleColor.fragmentshader");
 	
+	// Get a handle for our "MVP" uniform
+	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+
+	// Projection matrix : 45?Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+	glm::mat4 Projection = glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
+
+	glm::mat4 View = glm::lookAt(
+		glm::vec3(4,3,3),
+		glm::vec3(0,0,0),
+		glm::vec3(0,1,0)
+		);
+
+	glm::mat4 Model = glm::mat4(1.0f);
+
+	glm::mat4 MVP = Projection * View * Model;
+
 	static const GLfloat g_vertex_buffer_data[] = {
 		-1.0f, -1.0f, 0.0f,
 		1.0f, -1.0f, 0.0f,
@@ -72,8 +90,6 @@ int main( void )
 
 	//生成1个buffer，并将结果的标识保存在vertexbuffer里
 	glGenBuffers(1, &vertexbuffer);
-
-	// 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 
 	// 把定点给OpenGL
@@ -84,6 +100,11 @@ int main( void )
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		glUseProgram(programID);
+
+		// Send our transformation to the currently bound shader, 
+		// in the "MVP" uniform
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
+
 
 		// Draw nothing, see you in tutorial 2 !
 		glEnableVertexAttribArray(0);
